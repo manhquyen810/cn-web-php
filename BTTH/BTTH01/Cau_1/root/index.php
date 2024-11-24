@@ -1,14 +1,33 @@
 <?php
 session_start();
 
-// Khởi tạo mảng flowers trong session nếu chưa tồn tại
-if (!isset($_SESSION['flowers'])) {
-    $_SESSION['flowers'] = [];
+//if (!is_dir('uploads')) {
+//    mkdir('uploads', 0777, true);
+//}
+
+$flowers = $_SESSION['flowers'] ?? [];
+$action = $_GET['action'] ?? '';
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+
+// Xử lý xóa hoa
+if ($action === 'delete' && isset($id) && isset($flowers[$id])) {
+    $imagePath = $flowers[$id]['image'];
+    if (file_exists($imagePath)) {
+        unlink($imagePath);
+    }
+    unset($flowers[$id]);
+    $_SESSION['flowers'] = array_values($flowers);
+    header('Location: index.php');
+    exit();
 }
 
-$flowers = $_SESSION['flowers'];
+// Lấy thông tin hoa để sửa
+$editFlower = null;
+if ($action === 'edit' && isset($id) && isset($flowers[$id])) {
+    $editFlower = $flowers[$id];
+}
 
-// Xử lý thêm/sửa hoa
+// Xử lý form khi thêm/sửa hoa
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['nameFlower'] ?? '';
     $description = $_POST['mtFlower'] ?? '';
@@ -31,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Xử lý sửa hoa
     if ($editId !== null && isset($flowers[$editId])) {
-        // Cập nhật thông tin hoa
         $flowers[$editId]['name'] = $name;
         $flowers[$editId]['description'] = $description;
         if (!empty($imagePath)) {
@@ -39,14 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (file_exists($flowers[$editId]['image'])) {
                 unlink($flowers[$editId]['image']);
             }
-            $flowers[$editId]['image'] = $imagePath; // Cập nhật ảnh mới
+            $flowers[$editId]['image'] = $imagePath;
         }
     } else {
-        // Thêm hoa mới với id tự động tăng
+        // Thêm hoa mới
         if (!empty($name) && !empty($description)) {
-            $newId = count($flowers);
             $flowers[] = [
-                'id' => $newId,
                 'name' => $name,
                 'description' => $description,
                 'image' => $imagePath
@@ -58,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: index.php');
     exit();
 }
+
 ?>
 
 <!doctype html>
